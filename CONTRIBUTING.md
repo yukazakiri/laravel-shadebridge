@@ -93,4 +93,19 @@ composer refactor
 vendor/bin/rector process
 ```
 
+## Release metadata and Packagist
+
+Do not add a `version` field to `composer.json`. Composer and Packagist infer versions from Git tags. The release metadata test checks this rule and the public package name.
+
+The historical `0.1.2` tag declares `"version": "0.1.0"`, so Packagist ignores that tag and may show a version-mismatch warning in its update log. This does not affect Shadebridge `0.2.0`, which omits the field and is indexed correctly. New commits or releases cannot repair metadata inside an old tag.
+
+Do not move or delete published tags to clear this warning: existing installations may reference those commits. Preserve the release history and inspect the update log to distinguish the historical warning from a current release failure.
+
+Before publishing a new release:
+
+1. Run `composer validate --strict`, `composer test`, and `composer analyse`.
+2. Confirm `composer.json` has no explicit `version` and uses `yukazakiri/laravel-shadebridge`.
+3. Tag the approved release commit, then publish the GitHub release.
+4. Verify the new version appears on [Packagist](https://packagist.org/packages/yukazakiri/laravel-shadebridge). If it does not, inspect the package's Last Update Log and webhook configuration. Never put a Packagist API token in source files or release notes.
+
 Please ensure all checks pass before submitting a Pull Request.
