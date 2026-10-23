@@ -90,13 +90,51 @@ This command will:
 3. Register the theme in `resources/js/conf/themes.ts`.
 4. Add the necessary imports to `app.css`.
 
+Both `theme:add` and `theme:import` use the same importer. Supported JSON has a non-empty `cssVars.light` object, optional `cssVars.theme` and `cssVars.dark` objects, and optional simple `css["@layer base"]` rules. Registry files, scripts, arbitrary CSS layers, URL-valued declarations, and nested selectors are not installed. Import only registries you trust. HTTP errors, invalid JSON, and unsupported declarations fail before source changes; HTTPS certificate verification remains enabled.
+
+```bash
+php artisan theme:import https://tweakcn.com/r/themes/kodama-grove.json
+php artisan theme:import https://tweakcn.com/r/themes/kodama-grove.json --force --description="Updated palette"
+```
+
+`--force` replaces CSS and catalog metadata. `--name` overrides the ID/display name. The `default` ID is reserved for the application's original palette.
+
+### System default
+
+```bash
+php artisan theme:default kodama-grove
+php artisan theme:default
+php artisan theme:default --reset
+npm run build
+```
+
+The command writes `defaultColorTheme` to `resources/js/conf/themes.ts`. React and Vue hooks use it when no valid browser choice exists. Existing valid choices remain unchanged. Removing the selected system default resets it to `default`. Missing/removed browser choices fall back without persisting the fallback, allowing future system-default changes to apply.
+
+For customized hooks, import `defaultColorTheme`, validate stored IDs against `themes`, and remove all existing `theme-*` classes before applying the selected ID. Preserve your app's existing storage key.
+
+To apply the same choice before hydration, include this in the document head before frontend scripts (after your light/dark initializer):
+
+```blade
+@include('theme-tools::initialize')
+{{-- Custom storage key: --}}
+@include('theme-tools::initialize', ['storageKey' => 'ui-color-theme'])
+```
+
+New scaffolds export `defaultColorTheme`. Existing installations can add `export const defaultColorTheme: ColorTheme = 'default';` to their catalog before adopting the updated hooks. Do not run `theme:setup --force` over customized profile pages.
+
 ### Removing Themes
 
 To remove a theme and clean up its files:
 
 ```bash
 php artisan theme:remove theme-name
+php artisan theme:remove --list
+php artisan theme:remove theme-name --force
+# Interactive multi-select:
+php artisan theme:remove
 ```
+
+Removal cleans CSS imports, files, catalog entries, and type IDs, including catalog-only stale themes. `default` is protected. Rebuild assets after every import, removal, or default change.
 
 ### Updating Components
 
@@ -119,6 +157,16 @@ Check whether the package has the files and frontend dependencies it expects:
 
 ```bash
 php artisan theme:doctor
+```
+
+## Verification
+
+```bash
+composer test
+composer analyse
+vendor/bin/pint --test
+# Node 22.13+ (TypeScript stripping; no npm dependencies required):
+node --test tests/frontend/color-theme.test.mjs
 ```
 
 ## Contributing

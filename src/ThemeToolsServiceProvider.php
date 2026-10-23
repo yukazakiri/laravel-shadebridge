@@ -6,6 +6,7 @@ namespace Yukzakiri\ThemeTools;
 
 use Illuminate\Support\ServiceProvider;
 use Yukzakiri\ThemeTools\Console\Commands\AddThemeCommand;
+use Yukzakiri\ThemeTools\Console\Commands\DefaultThemeCommand;
 use Yukzakiri\ThemeTools\Console\Commands\ImportThemeCommand;
 use Yukzakiri\ThemeTools\Console\Commands\RemoveThemeCommand;
 use Yukzakiri\ThemeTools\Console\Commands\ThemeDoctorCommand;
@@ -16,12 +17,15 @@ final class ThemeToolsServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'theme-tools');
+
         if (! $this->app->runningInConsole()) {
             return;
         }
 
         $this->commands([
             AddThemeCommand::class,
+            DefaultThemeCommand::class,
             ThemeDoctorCommand::class,
             ImportThemeCommand::class,
             RemoveThemeCommand::class,

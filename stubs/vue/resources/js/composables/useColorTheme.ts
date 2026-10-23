@@ -1,7 +1,7 @@
-import { themes, type ColorTheme } from "@/conf/themes";
+import { defaultColorTheme, themes, type ColorTheme } from "@/conf/themes";
 import { ref } from "vue";
 
-const currentTheme = ref<ColorTheme>("default");
+const currentTheme = ref<ColorTheme>(defaultColorTheme);
 const themeClassPrefix = "theme-";
 
 const isValidTheme = (theme: string | null): theme is ColorTheme => {
@@ -23,7 +23,7 @@ const setCookie = (name: string, value: string, days = 365): void => {
 
 const getStoredTheme = (): ColorTheme => {
   if (typeof window === "undefined") {
-    return "default";
+    return defaultColorTheme;
   }
 
   const storedTheme = localStorage.getItem("color-theme");
@@ -32,7 +32,8 @@ const getStoredTheme = (): ColorTheme => {
     return storedTheme;
   }
 
-  return "default";
+  localStorage.removeItem("color-theme");
+  return defaultColorTheme;
 };
 
 const applyTheme = (theme: ColorTheme): void => {
@@ -55,11 +56,6 @@ const applyTheme = (theme: ColorTheme): void => {
 export function initializeColorTheme(): void {
   if (typeof window === "undefined") {
     return;
-  }
-
-  if (!localStorage.getItem("color-theme")) {
-    localStorage.setItem("color-theme", "default");
-    setCookie("color-theme", "default");
   }
 
   currentTheme.value = getStoredTheme();

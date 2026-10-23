@@ -47,3 +47,64 @@ it('shows a setup hint before importing when theme files are missing', function 
     $this->artisan('theme:import', ['url' => 'https://tweakcn.com/r/themes/vintage-paper.json'])
         ->assertFailed();
 });
+
+it('rejects malformed registry data without changing source files', function (mixed $data) {
+    $this->writeResourceFile('css/app.css', "@import 'tailwindcss';");
+    $catalog = File::get($this->packagePath('stubs/react/resources/js/conf/themes.ts'));
+    $this->writeResourceFile('js/conf/themes.ts', $catalog);
+    Http::fake(['*' => Http::response($data)]);
+
+    $this->artisan('theme:import', ['url' => 'https://example.com/theme.json'])->assertFailed();
+
+    expect(File::get(resource_path('js/conf/themes.ts')))->toBe($catalog)
+        ->and(File::get(resource_path('css/app.css')))->toBe("@import 'tailwindcss';")
+        ->and(File::exists(resource_path('css/themes')))->toBeFalse();
+})->with([
+    'missing variables' => [[]],
+    'scalar json' => ['oops'],
+    'invalid section' => [['cssVars' => ['light' => ['primary' => 'red'], 'dark' => 'invalid']]],
+    'declaration injection' => [['cssVars' => ['light' => ['primary' => 'red; } body { display:none']]]],
+    'remote css' => [['cssVars' => ['light' => ['primary' => 'url(https://example.com)']]]],
+]);
+
+it('preserves shared tokens and updates metadata on forced reimport', function () {
+    $this->writeResourceFile('css/app.css', "/* Unicode: café */\n@import 'tailwindcss';");
+    $this->writeResourceFile('js/conf/themes.ts', File::get($this->packagePath('stubs/react/resources/js/conf/themes.ts')));
+    $data = ['name' => 'Kodama Grove', 'cssVars' => [
+        'theme' => ['radius' => '0.425rem', 'font-sans' => 'var(--app-font)'],
+        'light' => ['primary' => 'red'],
+        'dark' => ['primary' => 'blue'],
+    ], 'css' => ['@layer base' => ['body, p' => ['letter-spacing' => 'var(--tracking-normal)']]]];
+    Http::fake(['*' => Http::response($data)]);
+    $this->artisan('theme:import', ['url' => 'https://example.com/theme.json'])->assertSuccessful();
+    $this->artisan('theme:import', ['url' => 'https://example.com/theme.json', '--force' => true, '--description' => 'Updated'])->assertSuccessful();
+
+    $css = File::get(resource_path('css/themes/kodama-grove.css'));
+    expect(substr_count($css, '--radius: 0.425rem;'))->toBe(2)
+        ->and($css)->toContain('.theme-kodama-grove body, .theme-kodama-grove p')
+        ->and($css)->not->toContain('fonts.googleapis.com')
+        ->and(substr_count(File::get(resource_path('css/app.css')), './themes/kodama-grove.css'))->toBe(1);
+    $this->assertResourceFileContains('js/conf/themes.ts', "description: 'Updated'");
+});
+
+it('handles HTTP failures without generating a theme', function () {
+    $this->writeResourceFile('css/app.css', '');
+    $this->writeResourceFile('js/conf/themes.ts', File::get($this->packagePath('stubs/react/resources/js/conf/themes.ts')));
+    Http::fake(['*' => Http::response(['cssVars' => ['light' => ['primary' => 'red']]], 500)]);
+    $this->artisan('theme:import', ['url' => 'https://example.com/theme.json'])->assertFailed();
+    expect(File::exists(resource_path('css/themes')))->toBeFalse();
+});
+
+it('imports the actual Kodama Grove registry fixture', function () {
+    $this->writeResourceFile('css/app.css', "@import 'tailwindcss';");
+    $this->writeResourceFile('js/conf/themes.ts', File::get($this->packagePath('stubs/react/resources/js/conf/themes.ts')));
+    $data = json_decode(File::get($this->packagePath('tests/Fixtures/kodama-grove.json')), true, 512, JSON_THROW_ON_ERROR);
+    Http::fake(['*' => Http::response($data)]);
+    $this->artisan('theme:import', ['url' => 'https://tweakcn.com/r/themes/kodama-grove.json'])->assertSuccessful();
+    $this->artisan('theme:default', ['theme' => 'kodama-grove'])->assertSuccessful();
+    $this->assertResourceFileContains('css/themes/kodama-grove.css', '--radius: 0.425rem;');
+    $this->assertResourceFileContains('css/themes/kodama-grove.css', '.theme-kodama-grove body');
+    $this->assertResourceFileContains('js/conf/themes.ts', "font: 'Merriweather'");
+    $html = view('theme-tools::initialize', ['storageKey' => 'ui-color-theme'])->render();
+    expect($html)->toContain('kodama-grove', 'ui-color-theme');
+});

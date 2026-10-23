@@ -40,8 +40,8 @@ CSS);
 
     $this->assertResourceFileContains('css/themes/midnight-blue.css', '.theme-midnight-blue');
     $this->assertResourceFileContains('css/themes/midnight-blue.css', '--primary: oklch(0.45 0.12 250);');
-    $this->assertResourceFileContains('css/app.css', "@import './themes/midnight-blue.css';");
-    $this->assertResourceFileContains('css/app.css', "@import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');");
+    $this->assertResourceFileContains('css/app.css', '@import "./themes/midnight-blue.css";');
+    $this->assertResourceFileContains('css/themes/midnight-blue.css', "@import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');");
     $this->assertResourceFileContains('js/conf/themes.ts', "| 'midnight-blue'");
     $this->assertResourceFileContains('js/conf/themes.ts', "id: 'midnight-blue'");
 });

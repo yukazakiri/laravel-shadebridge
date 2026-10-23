@@ -1,4 +1,4 @@
-import { themes, type ColorTheme } from "@/conf/themes";
+import { defaultColorTheme, themes, type ColorTheme } from "@/conf/themes";
 import { useCallback, useSyncExternalStore } from "react";
 
 export type UseColorThemeReturn = {
@@ -8,7 +8,7 @@ export type UseColorThemeReturn = {
 
 const listeners = new Set<() => void>();
 const themeClassPrefix = "theme-";
-let currentTheme: ColorTheme = "default";
+let currentTheme: ColorTheme = defaultColorTheme;
 
 const isValidTheme = (theme: string | null): theme is ColorTheme => {
   if (!theme) {
@@ -29,7 +29,7 @@ const setCookie = (name: string, value: string, days = 365): void => {
 
 const getStoredTheme = (): ColorTheme => {
   if (typeof window === "undefined") {
-    return "default";
+    return defaultColorTheme;
   }
 
   const storedTheme = localStorage.getItem("color-theme");
@@ -38,7 +38,8 @@ const getStoredTheme = (): ColorTheme => {
     return storedTheme;
   }
 
-  return "default";
+  localStorage.removeItem("color-theme");
+  return defaultColorTheme;
 };
 
 const applyTheme = (theme: ColorTheme): void => {
@@ -71,11 +72,6 @@ export function initializeColorTheme(): void {
     return;
   }
 
-  if (!localStorage.getItem("color-theme")) {
-    localStorage.setItem("color-theme", "default");
-    setCookie("color-theme", "default");
-  }
-
   currentTheme = getStoredTheme();
   applyTheme(currentTheme);
 }
@@ -84,7 +80,7 @@ export function useColorTheme(): UseColorThemeReturn {
   const colorTheme: ColorTheme = useSyncExternalStore(
     subscribe,
     () => currentTheme,
-    () => "default",
+    () => defaultColorTheme,
   );
 
   const updateColorTheme = useCallback((theme: ColorTheme): void => {
