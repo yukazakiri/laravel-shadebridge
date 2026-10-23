@@ -50,3 +50,5 @@ export const themes: ThemeConfig[] = [
     },
   },
 ];
+
+export const defaultColorTheme: ColorTheme = 'default';

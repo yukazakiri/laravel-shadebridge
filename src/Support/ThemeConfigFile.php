@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools\Support;
+namespace Yukazakiri\Shadebridge\Support;
 
 use Illuminate\Support\Facades\File;
 
@@ -18,9 +18,23 @@ final class ThemeConfigFile
         $content = File::get($this->path);
         $updated = $this->upsertColorThemeType($content, $theme['id']);
 
-        if (! $this->containsThemeObject($updated, $theme['id'])) {
-            $updated = $this->appendThemeObject($updated, $this->formatThemeObject($theme));
+        $array = $this->parseThemesArray($updated);
+        if ($array === null) {
+            throw new \RuntimeException('Cannot parse theme catalog. Expected an exported ThemeConfig[] array.');
         }
+        $objects = $this->extractThemeObjects($array['body']);
+        $replaced = false;
+        foreach ($objects as &$object) {
+            if ($this->containsThemeObject($object, $theme['id'])) {
+                $object = $this->formatThemeObject($theme);
+                $replaced = true;
+            }
+        }
+        unset($object);
+        if (! $replaced) {
+            $objects[] = $this->formatThemeObject($theme);
+        }
+        $updated = $array['before'].$array['open'].$this->formatThemesArrayBody($objects).$array['close'].$array['after'];
 
         if ($updated === $content) {
             return false;
@@ -29,6 +43,40 @@ final class ThemeConfigFile
         File::put($this->path, $updated);
 
         return true;
+    }
+
+    /** @return list<string> */
+    public function ids(): array
+    {
+        $array = $this->parseThemesArray(File::get($this->path));
+        if ($array === null) {
+            throw new \RuntimeException('Cannot parse theme catalog.');
+        }
+        preg_match_all('/\\bid:\\s*["\']([^"\']+)["\']/', $array['body'], $matches);
+
+        return array_values(array_unique($matches[1]));
+    }
+
+    public function defaultTheme(): string
+    {
+        $content = File::get($this->path);
+        preg_match('/export const defaultColorTheme(?::\\s*ColorTheme)?\\s*=\\s*["\']([^"\']+)["\'];/', $content, $matches);
+
+        return $matches[1] ?? 'default';
+    }
+
+    public function setDefaultTheme(string $themeId): void
+    {
+        if (! in_array($themeId, $this->ids(), true)) {
+            throw new \InvalidArgumentException('Default theme must be installed in the catalog.');
+        }
+        $content = File::get($this->path);
+        $declaration = sprintf("export const defaultColorTheme: ColorTheme = '%s';", $this->escapeTypeScriptString($themeId));
+        $pattern = '/export const defaultColorTheme(?::\\s*ColorTheme)?\\s*=\\s*["\'][^"\']+["\'];/';
+        $content = preg_match($pattern, $content)
+            ? preg_replace_callback($pattern, fn (): string => $declaration, $content)
+            : $content."\n".$declaration."\n";
+        File::put($this->path, $content);
     }
 
     public function removeTheme(string $themeId): bool
@@ -42,6 +90,9 @@ final class ThemeConfigFile
         }
 
         File::put($this->path, $updated);
+        if ($this->defaultTheme() === $themeId) {
+            $this->setDefaultTheme('default');
+        }
 
         return true;
     }
@@ -95,20 +146,6 @@ final class ThemeConfigFile
     private function containsThemeObject(string $content, string $themeId): bool
     {
         return preg_match('/id:\s*["\']'.preg_quote($themeId, '/').'["\']/', $content) === 1;
-    }
-
-    private function appendThemeObject(string $content, string $themeObject): string
-    {
-        $array = $this->parseThemesArray($content);
-
-        if ($array === null) {
-            return $content;
-        }
-
-        $objects = $this->extractThemeObjects($array['body']);
-        $objects[] = $themeObject;
-
-        return $array['before'].$array['open'].$this->formatThemesArrayBody($objects).$array['close'].$array['after'];
     }
 
     private function removeThemeObject(string $content, string $themeId): string

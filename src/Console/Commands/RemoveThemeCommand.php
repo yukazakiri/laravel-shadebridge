@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools\Console\Commands;
+namespace Yukazakiri\Shadebridge\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Yukzakiri\ThemeTools\Support\ThemeConfigFile;
+use Yukazakiri\Shadebridge\Support\ThemeConfigFile;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
@@ -61,6 +61,12 @@ final class RemoveThemeCommand extends Command
 
     private function removeSingleTheme(string $themeId): int
     {
+        if (! preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $themeId)) {
+            error('Invalid theme ID.');
+
+            return self::FAILURE;
+        }
+
         if (in_array($themeId, $this->protectedThemes)) {
             error(sprintf("The '%s' theme is protected and cannot be removed.", $themeId));
 
@@ -234,12 +240,10 @@ final class RemoveThemeCommand extends Command
      */
     private function getAvailableThemes(): array
     {
-        if (! File::isDirectory($this->themesDir)) {
-            return [];
-        }
-
-        $files = File::files($this->themesDir);
-        $themes = [];
+        $files = File::isDirectory($this->themesDir) ? File::files($this->themesDir) : [];
+        $themes = File::exists($this->themesConfigPath)
+            ? (new ThemeConfigFile($this->themesConfigPath))->ids()
+            : [];
 
         foreach ($files as $file) {
             if ($file->getExtension() === 'css') {
@@ -251,6 +255,7 @@ final class RemoveThemeCommand extends Command
             array_unshift($themes, 'default');
         }
 
+        $themes = array_values(array_unique($themes));
         sort($themes);
 
         return $themes;
@@ -264,7 +269,8 @@ final class RemoveThemeCommand extends Command
 
         $cssFile = sprintf('%s/%s.css', $this->themesDir, $themeId);
 
-        return File::exists($cssFile);
+        return File::exists($cssFile) || (File::exists($this->themesConfigPath)
+            && in_array($themeId, (new ThemeConfigFile($this->themesConfigPath))->ids(), true));
     }
 
     private function hasRequiredThemeFiles(): bool
@@ -298,6 +304,7 @@ final class RemoveThemeCommand extends Command
     {
         $appCss = File::get($this->appCssPath);
 
+        $themeId = preg_quote($themeId, '/');
         $patterns = [
             '/@import\s+["\']\.\/themes\/'.$themeId.'\.css["\'];\n?/',
             '/@import\s+["\']\.\.\/css\/themes\/'.$themeId.'\.css["\'];\n?/',

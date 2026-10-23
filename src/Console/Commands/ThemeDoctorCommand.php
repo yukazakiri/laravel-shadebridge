@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools\Console\Commands;
+namespace Yukazakiri\Shadebridge\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -19,7 +19,7 @@ final class ThemeDoctorCommand extends Command
 
     public function handle(): int
     {
-        note('Checking ShadcThemes Tools setup...');
+        note('Checking Shadebridge for Laravel setup...');
         note('');
 
         $criticalChecks = [

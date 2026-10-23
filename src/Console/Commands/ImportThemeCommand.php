@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools\Console\Commands;
+namespace Yukazakiri\Shadebridge\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
@@ -10,7 +10,8 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Yukzakiri\ThemeTools\Support\ThemeConfigFile;
+use Yukazakiri\Shadebridge\Support\ThemeConfigFile;
+use Yukazakiri\Shadebridge\Support\ThemeDefinition;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
@@ -24,9 +25,10 @@ final class ImportThemeCommand extends Command
     protected $signature = 'theme:import
                             {url? : The URL to the theme JSON file (e.g. https://tweakcn.com/r/themes/vintage-paper.json)}
                             {--name= : Override the theme name}
-                            {--description= : Custom description for the theme}';
+                            {--description= : Custom description for the theme}
+                            {--force : Overwrite an existing theme without confirmation}';
 
-    protected $description = 'Import a shadcn theme from a tweakcn.com JSON URL';
+    protected $description = 'Import a theme from a tweakcn or shadcn registry JSON URL';
 
     private string $themesDir;
 
@@ -57,7 +59,7 @@ final class ImportThemeCommand extends Command
             }
         }
 
-        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+        if (! filter_var($url, FILTER_VALIDATE_URL) || ! in_array(parse_url($url, PHP_URL_SCHEME), ['https', 'http'], true)) {
             error('Invalid URL provided.');
 
             return self::FAILURE;
@@ -72,11 +74,11 @@ final class ImportThemeCommand extends Command
             callback: function () use ($url) {
                 try {
                     /** @var Response $response */
-                    $response = Http::timeout(30)
-                        ->withOptions(['verify' => false])
+                    $response = Http::connectTimeout(10)->timeout(30)
+                        ->acceptJson()
                         ->get($url);
 
-                    if ($response->failed()) {
+                    if (! $response->successful()) {
                         return null;
                     }
 
@@ -90,17 +92,31 @@ final class ImportThemeCommand extends Command
             message: 'Fetching theme from: '.$url
         );
 
-        if (! $themeData) {
+        if (! is_array($themeData)) {
             error('Failed to fetch or parse theme from the provided URL.');
 
             return self::FAILURE;
         }
 
+        try {
+            (new ThemeDefinition)->validate($themeData);
+        } catch (\InvalidArgumentException $exception) {
+            error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
         $rawThemeName = $this->option('name') ?? ($themeData['name'] ?? $this->extractThemeNameFromUrl($url));
+        if (! is_string($rawThemeName) || Str::slug($rawThemeName) === '' || Str::slug($rawThemeName) === 'default') {
+            error('Theme name must produce a non-empty ID other than the protected default.');
+
+            return self::FAILURE;
+        }
+
         $themeId = Str::slug($rawThemeName);
         $themeName = Str::title(str_replace(['-', '_'], ' ', $rawThemeName));
 
-        if ($this->themeExists($themeId) && ! confirm(sprintf("Theme '%s' already exists. Overwrite?", $themeId), false)) {
+        if ($this->themeExists($themeId) && ! $this->option('force') && ! confirm(sprintf("Theme '%s' already exists. Overwrite?", $themeId), false)) {
             info('Import cancelled.');
 
             return self::SUCCESS;
@@ -108,6 +124,8 @@ final class ImportThemeCommand extends Command
 
         info(sprintf('Importing theme: %s (id: %s)', $themeName, $themeId));
 
+        // Preflight the catalog before writing CSS or imports.
+        (new ThemeConfigFile($this->themesConfigPath))->ids();
         $cssContent = $this->generateCssFromThemeData($themeData, $themeId);
         $cssFilePath = sprintf('%s/%s.css', $this->themesDir, $themeId);
 
@@ -167,7 +185,7 @@ final class ImportThemeCommand extends Command
 
         $fontImports = $this->extractFontImports($cssVars);
         $lightVars = $this->buildCssVariables($cssVars['light'] ?? [], $cssVars['theme'] ?? []);
-        $darkVars = $this->buildCssVariables($cssVars['dark'] ?? [], []);
+        $darkVars = $this->buildCssVariables($cssVars['dark'] ?? [], $cssVars['theme'] ?? []);
         $additionalCss = $this->buildAdditionalCss($css, $themeId);
 
         $output = '';
@@ -206,8 +224,12 @@ final class ImportThemeCommand extends Command
             foreach (['font-sans', 'font-mono', 'font-serif'] as $fontVar) {
                 if (isset($cssVars[$section][$fontVar])) {
                     $fontValue = $cssVars[$section][$fontVar];
-                    $primaryFont = mb_trim(explode(',', $fontValue)[0]);
-                    $primaryFont = mb_trim($primaryFont, "\"'");
+                    $primaryFont = trim(explode(',', $fontValue)[0]);
+                    $primaryFont = trim($primaryFont, "\"'");
+
+                    if (str_starts_with($primaryFont, 'var(')) {
+                        continue;
+                    }
 
                     if (in_array(mb_strtolower($primaryFont), ['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-sans-serif', 'ui-serif', 'ui-monospace'], true)) {
                         continue;
@@ -235,14 +257,8 @@ final class ImportThemeCommand extends Command
     {
         $allVars = array_merge($themeVars, $vars);
 
-        $skipVars = ['radius'];
-
         $output = '';
         foreach ($allVars as $key => $value) {
-            if (in_array($key, $skipVars, true) && isset($themeVars[$key])) {
-                continue;
-            }
-
             $output .= "  --{$key}: {$value};\n";
         }
 
@@ -260,7 +276,10 @@ final class ImportThemeCommand extends Command
             if ($layer === '@layer base') {
                 $output .= "@layer base {\n";
                 foreach ($rules as $selector => $properties) {
-                    $scopedSelector = sprintf('.theme-%s %s', $themeId, $selector);
+                    $scopedSelector = implode(', ', array_map(
+                        fn (string $part): string => sprintf('.theme-%s %s', $themeId, trim($part)),
+                        explode(',', $selector),
+                    ));
                     $output .= "  {$scopedSelector} {\n";
                     foreach ($properties as $prop => $value) {
                         $output .= "    {$prop}: {$value};\n";
@@ -281,7 +300,7 @@ final class ImportThemeCommand extends Command
         $appCss = File::get($this->appCssPath);
         $importStatement = sprintf('@import "./themes/%s.css";', $themeId);
 
-        if (str_contains($appCss, $importStatement)) {
+        if (preg_match('/@import\s+["\']\.\/themes\/'.preg_quote($themeId, '/').'\.css["\'];/', $appCss)) {
             note('  - Import already exists in app.css');
 
             return;
@@ -290,14 +309,11 @@ final class ImportThemeCommand extends Command
         $pattern = '/@import\s+["\']\.\/themes\/[^"\']+["\'];/';
         if (preg_match_all($pattern, $appCss, $matches, PREG_OFFSET_CAPTURE)) {
             $lastMatch = end($matches[0]);
-            $insertPosition = $lastMatch[1] + mb_strlen($lastMatch[0]);
-            $appCss = mb_substr($appCss, 0, $insertPosition)."\n".$importStatement.mb_substr($appCss, $insertPosition);
+            $insertPosition = $lastMatch[1] + strlen($lastMatch[0]);
+            $appCss = substr($appCss, 0, $insertPosition)."\n".$importStatement.substr($appCss, $insertPosition);
         } else {
-            $animatePattern = '/@import\s+["\']tw-animate-css["\'];/';
-            if (preg_match($animatePattern, $appCss, $match, PREG_OFFSET_CAPTURE)) {
-                $insertPosition = $match[0][1] + mb_strlen($match[0][0]);
-                $appCss = mb_substr($appCss, 0, $insertPosition)."\n\n".$importStatement.mb_substr($appCss, $insertPosition);
-            }
+            // A leading import stays valid even when the app has no animation library.
+            $appCss = $importStatement."\n".$appCss;
         }
 
         File::put($this->appCssPath, $appCss);
@@ -315,7 +331,7 @@ final class ImportThemeCommand extends Command
         foreach (['theme', 'light'] as $section) {
             if (isset($cssVars[$section]['font-sans'])) {
                 $fontValue = $cssVars[$section]['font-sans'];
-                $font = mb_trim(explode(',', $fontValue)[0], "\"'");
+                $font = trim(trim(explode(',', $fontValue)[0]), "\"'");
                 break;
             }
         }

@@ -1,6 +1,6 @@
 {
-  "name": "yukzakiri/shadcthemes-tools",
-  "description": "Theme management Artisan commands for tweakcn themes.",
+  "name": "yukazakiri/laravel-shadebridge",
+  "description": "Import and manage shadcn themes in Laravel with Shadebridge.",
   "type": "library",
   "keywords": [
     "laravel",
@@ -10,7 +10,7 @@
     "tailwindcss",
     "tweakcn"
   ],
-  "homepage": "https://github.com/yukzakiri/shadcthemes-tools",
+  "homepage": "https://github.com/yukazakiri/laravel-shadebridge",
   "license": "MIT",
   "authors": [
     {
@@ -18,8 +18,8 @@
     }
   ],
   "support": {
-    "issues": "https://github.com/yukzakiri/shadcthemes-tools/issues",
-    "source": "https://github.com/yukzakiri/shadcthemes-tools"
+    "issues": "https://github.com/yukazakiri/laravel-shadebridge/issues",
+    "source": "https://github.com/yukazakiri/laravel-shadebridge"
   },
   "require": {
     "php": "^8.2",
@@ -31,7 +31,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Yukzakiri\\ThemeTools\\": "src/"
+      "Yukazakiri\\Shadebridge\\": "src/"
     }
   },
   "autoload-dev": {
@@ -48,7 +48,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "Yukzakiri\\ThemeTools\\ThemeToolsServiceProvider"
+        "Yukazakiri\\Shadebridge\\ShadebridgeServiceProvider"
       ]
     }
   },

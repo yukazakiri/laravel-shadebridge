@@ -1,6 +1,6 @@
-# Contributing to ShadcThemes Tools
+# Contributing to Shadebridge for Laravel
 
-Thank you for considering contributing to ShadcThemes Tools! This guide helps you set up a local development environment to work on the package.
+Thank you for considering contributing to Shadebridge for Laravel! This guide helps you set up a local development environment to work on the package.
 
 ## Local Development Setup
 
@@ -29,7 +29,7 @@ To develop this package locally, you typically link it to a Laravel application 
         }
     ],
     "require": {
-        "yukzakiri/shadcthemes-tools": "@dev"
+        "yukazakiri/laravel-shadebridge": "@dev"
     }
     ```
 
@@ -38,7 +38,7 @@ To develop this package locally, you typically link it to a Laravel application 
 2.  **Install the package:**
 
     ```bash
-    composer update yukzakiri/shadcthemes-tools
+    composer update yukazakiri/laravel-shadebridge
     ```
 
 ### Developing with Laravel Sail
