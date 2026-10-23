@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools;
+namespace Yukazakiri\Shadebridge;
 
 use Illuminate\Support\ServiceProvider;
-use Yukzakiri\ThemeTools\Console\Commands\AddThemeCommand;
-use Yukzakiri\ThemeTools\Console\Commands\DefaultThemeCommand;
-use Yukzakiri\ThemeTools\Console\Commands\ImportThemeCommand;
-use Yukzakiri\ThemeTools\Console\Commands\RemoveThemeCommand;
-use Yukzakiri\ThemeTools\Console\Commands\ThemeDoctorCommand;
-use Yukzakiri\ThemeTools\Console\Commands\ThemeSetupCommand;
-use Yukzakiri\ThemeTools\Console\Commands\ThemeUpdateCommand;
+use Yukazakiri\Shadebridge\Console\Commands\AddThemeCommand;
+use Yukazakiri\Shadebridge\Console\Commands\DefaultThemeCommand;
+use Yukazakiri\Shadebridge\Console\Commands\ImportThemeCommand;
+use Yukazakiri\Shadebridge\Console\Commands\RemoveThemeCommand;
+use Yukazakiri\Shadebridge\Console\Commands\ThemeDoctorCommand;
+use Yukazakiri\Shadebridge\Console\Commands\ThemeSetupCommand;
+use Yukazakiri\Shadebridge\Console\Commands\ThemeUpdateCommand;
 
-final class ThemeToolsServiceProvider extends ServiceProvider
+final class ShadebridgeServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {

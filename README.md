@@ -1,4 +1,4 @@
-# ShadcThemes Tools
+# Shadebridge for Laravel
 
 Powerful Artisan commands to seamlessly integrate and manage [tweakcn](https://tweakcn.com) / shadcn themes in your Laravel Inertia applications.
 
@@ -24,7 +24,7 @@ Support for **Inertia React** and **Inertia Vue**.
 Install the package via Composer:
 
 ```bash
-composer require yukzakiri/shadcthemes-tools
+composer require yukazakiri/laravel-shadebridge
 ```
 
 ## Quick Start

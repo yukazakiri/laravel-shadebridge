@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools\Console\Commands;
+namespace Yukazakiri\Shadebridge\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
@@ -10,8 +10,8 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Yukzakiri\ThemeTools\Support\ThemeConfigFile;
-use Yukzakiri\ThemeTools\Support\ThemeDefinition;
+use Yukazakiri\Shadebridge\Support\ThemeConfigFile;
+use Yukazakiri\Shadebridge\Support\ThemeDefinition;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;

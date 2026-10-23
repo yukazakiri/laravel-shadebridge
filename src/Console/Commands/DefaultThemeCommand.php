@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools\Console\Commands;
+namespace Yukazakiri\Shadebridge\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Yukzakiri\ThemeTools\Support\ThemeConfigFile;
+use Yukazakiri\Shadebridge\Support\ThemeConfigFile;
 
 final class DefaultThemeCommand extends Command
 {

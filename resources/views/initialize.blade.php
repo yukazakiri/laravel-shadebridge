@@ -1,5 +1,5 @@
 @php
-    $catalog = new \Yukzakiri\ThemeTools\Support\ThemeConfigFile(resource_path('js/conf/themes.ts'));
+    $catalog = new \Yukazakiri\Shadebridge\Support\ThemeConfigFile(resource_path('js/conf/themes.ts'));
     $themeIds = $catalog->ids();
     $defaultTheme = $catalog->defaultTheme();
     if (! in_array($defaultTheme, $themeIds, true)) {

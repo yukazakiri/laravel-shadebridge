@@ -4,7 +4,7 @@ namespace Tests;
 
 use Illuminate\Support\Facades\File;
 use Orchestra\Testbench\TestCase as BaseTestCase;
-use Yukzakiri\ThemeTools\ThemeToolsServiceProvider;
+use Yukazakiri\Shadebridge\ShadebridgeServiceProvider;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -35,7 +35,7 @@ abstract class TestCase extends BaseTestCase
     protected function getPackageProviders($app): array
     {
         return [
-            ThemeToolsServiceProvider::class,
+            ShadebridgeServiceProvider::class,
         ];
     }
 

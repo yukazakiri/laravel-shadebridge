@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Yukzakiri\ThemeTools\Support;
+namespace Yukazakiri\Shadebridge\Support;
 
 use Illuminate\Support\Facades\File;
 
